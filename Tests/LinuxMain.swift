@@ -1,6 +1,6 @@
 import XCTest
-@testable import auth_providerTests
+@testable import VaporAuthTests
 
 XCTMain([
-    testCase(auth_providerTests.allTests),
+    testCase(TokenTests.allTests),
 ])
