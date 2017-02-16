@@ -1,7 +1,7 @@
 import HTTP
 import Authentication
 
-let authUserKey = "auth-user"
+let authAuthenticatedKey = "auth-authenticated"
 let authHelperKey = "auth-helper"
 
 public final class Helper {
@@ -10,38 +10,38 @@ public final class Helper {
         self.request = request
     }
 
-    public var header: Authorization? {
+    public var header: AuthorizationHeader? {
         guard let authorization = request?.headers["Authorization"] else {
             return nil
         }
 
-        return Authorization(header: authorization)
+        return AuthorizationHeader(string: authorization)
     }
 
-    public func login<U: Authenticatable>(_ user: U) {
-        request?.storage[authUserKey] = user
+    public func authenticate<A: Authenticatable>(_ a: A) {
+        request?.storage[authAuthenticatedKey] = a
     }
 
-    public func login<U: Authenticatable & Persistable>(_ user: U, persist: Bool) throws {
-        request?.storage[authUserKey] = user
+    public func authenticate<AP: Authenticatable & Persistable>(_ ap: AP, persist: Bool) throws {
+        request?.storage[authAuthenticatedKey] = ap
         if persist {
             guard let request = request else {
                 throw AuthError.noRequest
             }
-            try user.persist(for: request)
+            try ap.persist(for: request)
         }
     }
 
-    public func logout() {
-        request?.storage[authUserKey] = nil
+    public func unauthenticate() {
+        request?.storage[authAuthenticatedKey] = nil
     }
 
-    public func user<U: Authenticatable>(_ userType: U.Type = U.self) throws -> U {
-        guard let user = request?.storage[authUserKey] as? U else {
+    public func authenticated<A: Authenticatable>(_ userType: A.Type = A.self) throws -> A {
+        guard let a = request?.storage[authAuthenticatedKey] as? A else {
             throw AuthenticationError.notAuthenticated
         }
 
-        return user
+        return a
     }
 }
 

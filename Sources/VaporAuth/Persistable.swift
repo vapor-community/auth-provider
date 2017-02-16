@@ -1,6 +1,5 @@
 import HTTP
 
-// This should move to auth-c module
 public protocol Persistable {
     func persist(for: Request) throws
     static func fetchPersisted(for: Request) throws -> Self?
@@ -13,7 +12,7 @@ public final class PersistMiddleware<U: Authenticatable & Persistable>: Middlewa
 
     public func respond(to request: Request, chainingTo next: Responder) throws -> Response {
         if let user = try U.fetchPersisted(for: request) {
-            request.auth.login(user)
+            request.auth.authenticate(user)
         }
 
         return try next.respond(to: request)

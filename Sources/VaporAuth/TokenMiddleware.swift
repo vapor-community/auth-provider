@@ -11,7 +11,7 @@ public final class TokenAuthenticationMiddleware<U: TokenAuthenticatable>: Middl
 
         let u = try U.authenticate(token)
 
-        request.auth.login(u)
+        request.auth.authenticate(u)
 
         return try next.respond(to: request)
     }
@@ -27,7 +27,7 @@ public final class TokenLoginMiddleware<U: TokenAuthenticatable & Persistable>: 
 
         let u = try U.authenticate(token)
 
-        try request.auth.login(u, persist: true)
+        try request.auth.authenticate(u, persist: true)
 
         return try next.respond(to: request)
     }

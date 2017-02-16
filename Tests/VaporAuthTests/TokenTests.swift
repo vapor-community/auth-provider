@@ -20,25 +20,21 @@ import Fluent
 // `Authorization: Bearer <token here>` header must be passed
 // with every request
 
-struct Token: TokenProtocol {
-    // This would be automatically implemented
-    // if the Token where an Entity
-
-    static func findUser<U : Entity>(for token: Authentication.Token) throws -> U {
-        // initializer a user with a name
-        // being the token's name
-        let node = try Node(node: [
-            "name": token.string
-        ])
-
-        return try U.init(node: node)
-    }
-}
-
 extension TestUser: TokenAuthenticatable {
     // This is the only conformance needed to make
     // TestUser authenticatable with tokens!
-    public typealias TokenType = Token
+    public typealias TokenType = TestUser
+
+    // but we're going to do a custom method instead
+    public static func authenticate(_ token: Token) throws -> Self {
+        return self.init(name: token.string)
+    }
+}
+
+extension Request {
+    func user() throws -> TestUser {
+        return try auth.authenticated()
+    }
 }
 
 extension TokenTests {
@@ -50,7 +46,7 @@ extension TokenTests {
 
         drop.get("name") { req in
             // return the users name
-            return try req.auth.user(TestUser.self).name
+            return try req.user().name
         }
 
         let token = "foo"
@@ -96,7 +92,7 @@ extension TokenTests {
         // add the token middleware to a route group
         drop.get("name") { req in
             // return the users name
-            return try req.auth.user(TestUser.self).name
+            return try req.user().name
         }
 
         let token = "foo"
