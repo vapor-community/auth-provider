@@ -1,34 +1,32 @@
 import Fluent
 
 final class TestUser: Entity {
-    var id: Node?
     let name: String
+    let storage = Storage()
 
     init(name: String) {
         self.name = name
     }
 
-    init(node: Node, in context: Context) throws {
-        id = try node.extract(TestUser.idKey)
-        name = try node.extract("name")
+    init(row: Row) throws {
+        name = try row.get("name")
     }
 
-    func makeNode(context: Context) throws -> Node {
-        return try Node(node: [
-            TestUser.idKey: id,
-            "name": name
-        ])
+    func makeRow() throws -> Row {
+        var row = Row()
+        try row.set("name", name)
+        return row
     }
 
     static func prepare(_ database: Database) throws {
-        try database.create(entity) { users in
+        try database.create(self) { users in
             users.id(for: self)
             users.string("name")
         }
     }
 
     static func revert(_ database: Database) throws {
-        try database.delete(entity)
+        try database.delete(self)
     }
 }
 
@@ -37,8 +35,8 @@ import HTTP
 import URI
 
 extension Request {
-    convenience init(_ method: Method, _ path: String) throws {
+    convenience init(_ method: Method, _ path: String) {
         let uri = URI(host: "0.0.0.0", path: path)
-        try self.init(method: method, uri: uri)
+        self.init(method: method, uri: uri)
     }
 }

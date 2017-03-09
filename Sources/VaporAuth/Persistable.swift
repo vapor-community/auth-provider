@@ -29,7 +29,7 @@ public protocol SessionPersistable: Persistable, Entity {}
 
 extension SessionPersistable {
     public func persist(for request: Request) throws {
-        try request.session().data["session-id"] = id
+        try request.session().data.set("session-id", id)
     }
 
     public static func fetchPersisted(for request: Request) throws -> Self? {
