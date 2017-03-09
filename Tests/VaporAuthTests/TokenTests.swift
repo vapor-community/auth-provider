@@ -40,7 +40,7 @@ extension Request {
 extension TokenTests {
     // Test stateless token authentication
     func testAuthentication() throws {
-        let drop = Droplet()
+        let drop = try Droplet()
 
         drop.middleware += TokenAuthenticationMiddleware(TestUser.self)
 
@@ -51,9 +51,9 @@ extension TokenTests {
 
         let token = "foo"
 
-        let req = try Request(.get, "name")
+        let req = Request(.get, "name")
         req.headers["Authorization"] = "Bearer \(token)"
-        let res = try drop.respond(to: req)
+        let res = drop.respond(to: req)
 
         XCTAssertEqual(res.body.bytes?.string, token)
     }
@@ -72,7 +72,7 @@ extension TestUser: SessionPersistable {
     public static func fetchPersisted(for req: Request) throws -> Self? {
         // take the cookie and set it as the user's
         // name for easy verification
-        guard let cookie = req.cookies["vapor-sessions"] else {
+        guard let cookie = req.cookies["vapor-session"] else {
             return nil
         }
         return self.init(name: cookie)
@@ -82,10 +82,10 @@ extension TestUser: SessionPersistable {
 extension TokenTests {
 
     func testPersistance() throws {
-        let drop = Droplet()
+        let drop = try Droplet()
 
         let sessions = MemorySessions()
-        drop.middleware += SessionsMiddleware(sessions: sessions)
+        drop.middleware += SessionsMiddleware(sessions)
         drop.middleware += PersistMiddleware(TestUser.self)
         drop.middleware += TokenLoginMiddleware(TestUser.self)
 
@@ -98,21 +98,21 @@ extension TokenTests {
         let token = "foo"
 
         // login request with token
-        let req = try Request(.get, "name")
+        let req = Request(.get, "name")
         req.headers["Authorization"] = "Bearer \(token)"
-        let res = try drop.respond(to: req)
+        let res = drop.respond(to: req)
 
         // verify response and get cookie
         XCTAssertEqual(res.body.bytes?.string, token)
-        guard let cookie = res.cookies["vapor-sessions"] else {
+        guard let cookie = res.cookies["vapor-session"] else {
             XCTFail("No cookie")
             return
         }
 
         // logged in request with cookie
-        let req2 = try Request(.get, "name")
-        req2.cookies["vapor-sessions"] = cookie
-        let res2 = try drop.respond(to: req2)
+        let req2 = Request(.get, "name")
+        req2.cookies["vapor-session"] = cookie
+        let res2 = drop.respond(to: req2)
 
         XCTAssertEqual(res2.body.bytes?.string, cookie)
     }
