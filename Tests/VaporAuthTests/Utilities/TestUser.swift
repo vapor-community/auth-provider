@@ -17,17 +17,6 @@ final class TestUser: Entity {
         try row.set("name", name)
         return row
     }
-
-    static func prepare(_ database: Database) throws {
-        try database.create(self) { users in
-            users.id(for: self)
-            users.string("name")
-        }
-    }
-
-    static func revert(_ database: Database) throws {
-        try database.delete(self)
-    }
 }
 
 
@@ -36,7 +25,7 @@ import URI
 
 extension Request {
     convenience init(_ method: Method, _ path: String) {
-        let uri = URI(host: "0.0.0.0", path: path)
+        let uri = URI(hostname: "0.0.0.0", path: path)
         self.init(method: method, uri: uri)
     }
 }

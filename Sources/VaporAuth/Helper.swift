@@ -10,6 +10,8 @@ public final class Helper {
         self.request = request
     }
 
+    /// Returns the `Authorization: ...` header
+    // from the request.
     public var header: AuthorizationHeader? {
         guard let authorization = request?.headers["Authorization"] else {
             return nil
@@ -18,10 +20,17 @@ public final class Helper {
         return AuthorizationHeader(string: authorization)
     }
 
+    /// Authenticates an `Authenticatable` type.
+    ///
+    /// `isAuthenticated` will return `true` for this type
     public func authenticate<A: Authenticatable>(_ a: A) {
         request?.storage[authAuthenticatedKey] = a
     }
 
+    /// Authenticates an `Authenticatable` and `Peristable` type
+    /// giving the additional option to persist.
+    ///
+    /// Calls `.persist(for: req)` on the model.
     public func authenticate<AP: Authenticatable & Persistable>(_ ap: AP, persist: Bool) throws {
         request?.storage[authAuthenticatedKey] = ap
         if persist {
@@ -32,20 +41,34 @@ public final class Helper {
         }
     }
 
+    /// Removes the authenticated user from internal storage.
     public func unauthenticate() {
         request?.storage[authAuthenticatedKey] = nil
     }
 
-    public func authenticated<A: Authenticatable>(_ userType: A.Type = A.self) throws -> A {
-        guard let a = request?.storage[authAuthenticatedKey] as? A else {
+    /// Returns the Authenticated user if it exists.
+    public func authenticated<A: Authenticatable>(_ userType: A.Type = A.self) -> A? {
+        return request?.storage[authAuthenticatedKey] as? A
+    }
+    
+    /// Returns the Authenticated user or throws if it does not exist.
+    public func assertAuthenticated<A: Authenticatable>(_ userType: A.Type = A.self) throws -> A {
+        guard let a = authenticated(A.self) else {
             throw AuthenticationError.notAuthenticated
         }
 
         return a
     }
+    
+    /// Returns true if the User type has been authenticated.
+    public func isAuthenticated<A: Authenticatable>(_ userType: A.Type = A.self) -> Bool {
+        return authenticated(A.self) != nil
+    }
 }
 
 extension Request {
+    /// Access the authorization helper with
+    /// `authenticate` and `isAuthenticated` calls
     public var auth: Helper {
         if let existing = storage[authHelperKey] as? Helper {
             return existing

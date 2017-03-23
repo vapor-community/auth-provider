@@ -3,8 +3,10 @@ public enum AuthError: Error {
     case unspecified(Error)
 }
 
-extension AuthError: CustomStringConvertible {
-    public var description: String {
+import Debugging
+
+extension AuthError: Debuggable {
+    public var reason: String {
         let reason: String
 
         switch self {
@@ -16,5 +18,21 @@ extension AuthError: CustomStringConvertible {
 
         return "Auth error: \(reason)"
     }
+    
+    public var identifier: String {
+        switch self {
+        case .noRequest:
+            return "noRequest"
+        case .unspecified(let error):
+            return "unspecified (\(error))"
+        }
+    }
+    
+    public var suggestedFixes: [String] {
+        return []
+    }
+    
+    public var possibleCauses: [String] {
+        return []
+    }
 }
-

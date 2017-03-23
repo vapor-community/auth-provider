@@ -2,6 +2,7 @@ import XCTest
 import Vapor
 import HTTP
 @testable import VaporAuth
+import Authentication
 
 class TokenTests: XCTestCase {
     static var allTests = [
@@ -27,13 +28,17 @@ extension TestUser: TokenAuthenticatable {
 
     // but we're going to do a custom method instead
     public static func authenticate(_ token: Token) throws -> Self {
-        return self.init(name: token.string)
+        guard token.string == "foo" else {
+            throw AuthenticationError.invalidCredentials
+        }
+        
+        return self.init(name: "Bob")
     }
 }
 
 extension Request {
     func user() throws -> TestUser {
-        return try auth.authenticated()
+        return try auth.assertAuthenticated()
     }
 }
 
@@ -42,7 +47,7 @@ extension TokenTests {
     func testAuthentication() throws {
         let drop = try Droplet()
 
-        drop.middleware += TokenAuthenticationMiddleware(TestUser.self)
+        drop.middleware.append(TokenAuthenticationMiddleware(TestUser.self))
 
         drop.get("name") { req in
             // return the users name
@@ -55,7 +60,7 @@ extension TokenTests {
         req.headers["Authorization"] = "Bearer \(token)"
         let res = drop.respond(to: req)
 
-        XCTAssertEqual(res.body.bytes?.string, token)
+        XCTAssertEqual(res.body.bytes?.makeString(), "Bob")
     }
 }
 
@@ -85,9 +90,9 @@ extension TokenTests {
         let drop = try Droplet()
 
         let sessions = MemorySessions()
-        drop.middleware += SessionsMiddleware(sessions)
-        drop.middleware += PersistMiddleware(TestUser.self)
-        drop.middleware += TokenLoginMiddleware(TestUser.self)
+        drop.middleware.append(SessionsMiddleware(sessions))
+        drop.middleware.append(PersistMiddleware(TestUser.self))
+        drop.middleware.append(TokenLoginMiddleware(TestUser.self))
 
         // add the token middleware to a route group
         drop.get("name") { req in
@@ -103,7 +108,7 @@ extension TokenTests {
         let res = drop.respond(to: req)
 
         // verify response and get cookie
-        XCTAssertEqual(res.body.bytes?.string, token)
+        XCTAssertEqual(res.body.bytes?.makeString(), "Bob")
         guard let cookie = res.cookies["vapor-session"] else {
             XCTFail("No cookie")
             return
@@ -114,7 +119,7 @@ extension TokenTests {
         req2.cookies["vapor-session"] = cookie
         let res2 = drop.respond(to: req2)
 
-        XCTAssertEqual(res2.body.bytes?.string, cookie)
+        XCTAssertEqual(res2.body.bytes?.makeString(), cookie)
     }
 }
 
