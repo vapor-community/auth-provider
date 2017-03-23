@@ -7,7 +7,7 @@ import Authentication
 class TokenTests: XCTestCase {
     
     override func setUp() {
-        let memory = try! SQLiteDriver(path: ":memory:")
+        let memory = try! MemoryDriver()
         let database = Database(memory)
         
         database.log = { query in
@@ -21,10 +21,9 @@ class TokenTests: XCTestCase {
         try! TestUser.prepare(database)
         
         // add user and token to db
-        let tokenString = "foo"
         let user = TestUser(name: "Bob")
         try! user.save()
-        let token = try! TestToken(token: tokenString, user)
+        let token = try! TestToken(token: "foo", user)
         try! token.save()
     }
     
@@ -44,41 +43,24 @@ import Fluent
 // `Authorization: Bearer <token here>` header must be passed
 // with every request
 
-extension TestUser: TokenAuthenticatable {
-    // join the TestToken table and search for
-    // the supplied bearer token to authenticate
-    // the user
-    public typealias TokenType = TestToken
-}
-
-extension Request {
-    func user() throws -> TestUser {
-        return try auth.assertAuthenticated()
-    }
-}
-
 extension TokenTests {
     // Test stateless token authentication
     func testAuthentication() throws {
-        do {
-            let drop = try Droplet()
+        let drop = try Droplet()
 
-            let tokenMiddleware = TokenAuthenticationMiddleware(TestUser.self)
-            drop.middleware.append(tokenMiddleware)
+        let tokenMiddleware = TokenAuthenticationMiddleware(TestUser.self)
+        drop.middleware.append(tokenMiddleware)
 
-            drop.get("name") { req in
-                // return the users name
-                return try req.user().name
-            }
-
-            let req = Request(.get, "name")
-            req.headers["Authorization"] = "Bearer foo"
-            let res = drop.respond(to: req)
-
-            XCTAssertEqual(res.body.bytes?.makeString(), "Bob")
-        } catch {
-            XCTFail("\(error)")
+        drop.get("name") { req in
+            // return the users name
+            return try req.user().name
         }
+
+        let req = Request(.get, "name")
+        req.headers["Authorization"] = "Bearer foo"
+        let res = drop.respond(to: req)
+
+        XCTAssertEqual(res.body.bytes?.makeString(), "Bob")
     }
 }
 
@@ -90,17 +72,6 @@ extension TokenTests {
 // After that, the cookie can act as a login persister
 
 import Sessions
-
-extension TestUser: SessionPersistable {
-    public static func fetchPersisted(for req: Request) throws -> Self? {
-        // take the cookie and set it as the user's
-        // name for easy verification
-        guard let cookie = req.cookies["vapor-session"] else {
-            return nil
-        }
-        return self.init(name: cookie)
-    }
-}
 
 extension TokenTests {
 

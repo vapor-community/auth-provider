@@ -1,4 +1,6 @@
 import Fluent
+import AuthProvider
+import HTTP
 
 final class TestUser: Entity {
     let name: String
@@ -33,5 +35,35 @@ extension TestUser: Preparation {
     
     static func revert(_ database: Database) throws {
         try database.delete(self)
+    }
+}
+
+// MARK: Authentication
+
+extension TestUser: TokenAuthenticatable {
+    // join the TestToken table and search for
+    // the supplied bearer token to authenticate
+    // the user
+    public typealias TokenType = TestToken
+}
+
+// MARK: HTTP
+
+extension Request {
+    func user() throws -> TestUser {
+        return try auth.assertAuthenticated()
+    }
+}
+
+// MARK: Sessions
+
+extension TestUser: SessionPersistable {
+    public static func fetchPersisted(for req: Request) throws -> Self? {
+        // take the cookie and set it as the user's
+        // name for easy verification
+        guard let cookie = req.cookies["vapor-session"] else {
+            return nil
+        }
+        return self.init(name: cookie)
     }
 }
