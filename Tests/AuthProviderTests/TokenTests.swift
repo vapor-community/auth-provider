@@ -1,9 +1,32 @@
 import XCTest
 import Vapor
 import HTTP
-@testable import VaporAuth
+@testable import AuthProvider
+import Authentication
 
 class TokenTests: XCTestCase {
+    
+    override func setUp() {
+        let memory = try! MemoryDriver()
+        let database = Database(memory)
+        
+        database.log = { query in
+            print(query)
+        }
+        
+        TestToken.database = database
+        TestUser.database = database
+        
+        try! TestToken.prepare(database)
+        try! TestUser.prepare(database)
+        
+        // add user and token to db
+        let user = TestUser(name: "Bob")
+        try! user.save()
+        let token = try! TestToken(token: "foo", user)
+        try! token.save()
+    }
+    
     static var allTests = [
         ("testAuthentication", testAuthentication),
         ("testPersistance", testPersistance)
@@ -20,42 +43,24 @@ import Fluent
 // `Authorization: Bearer <token here>` header must be passed
 // with every request
 
-extension TestUser: TokenAuthenticatable {
-    // This is the only conformance needed to make
-    // TestUser authenticatable with tokens!
-    public typealias TokenType = TestUser
-
-    // but we're going to do a custom method instead
-    public static func authenticate(_ token: Token) throws -> Self {
-        return self.init(name: token.string)
-    }
-}
-
-extension Request {
-    func user() throws -> TestUser {
-        return try auth.authenticated()
-    }
-}
-
 extension TokenTests {
     // Test stateless token authentication
     func testAuthentication() throws {
         let drop = try Droplet()
 
-        drop.middleware += TokenAuthenticationMiddleware(TestUser.self)
+        let tokenMiddleware = TokenAuthenticationMiddleware(TestUser.self)
+        drop.middleware.append(tokenMiddleware)
 
         drop.get("name") { req in
             // return the users name
             return try req.user().name
         }
 
-        let token = "foo"
-
         let req = Request(.get, "name")
-        req.headers["Authorization"] = "Bearer \(token)"
+        req.headers["Authorization"] = "Bearer foo"
         let res = drop.respond(to: req)
 
-        XCTAssertEqual(res.body.bytes?.string, token)
+        XCTAssertEqual(res.body.bytes?.makeString(), "Bob")
     }
 }
 
@@ -68,26 +73,15 @@ extension TokenTests {
 
 import Sessions
 
-extension TestUser: SessionPersistable {
-    public static func fetchPersisted(for req: Request) throws -> Self? {
-        // take the cookie and set it as the user's
-        // name for easy verification
-        guard let cookie = req.cookies["vapor-session"] else {
-            return nil
-        }
-        return self.init(name: cookie)
-    }
-}
-
 extension TokenTests {
 
     func testPersistance() throws {
         let drop = try Droplet()
 
         let sessions = MemorySessions()
-        drop.middleware += SessionsMiddleware(sessions)
-        drop.middleware += PersistMiddleware(TestUser.self)
-        drop.middleware += TokenLoginMiddleware(TestUser.self)
+        drop.middleware.append(SessionsMiddleware(sessions))
+        drop.middleware.append(PersistMiddleware(TestUser.self))
+        drop.middleware.append(TokenLoginMiddleware(TestUser.self))
 
         // add the token middleware to a route group
         drop.get("name") { req in
@@ -95,15 +89,13 @@ extension TokenTests {
             return try req.user().name
         }
 
-        let token = "foo"
-
         // login request with token
         let req = Request(.get, "name")
-        req.headers["Authorization"] = "Bearer \(token)"
+        req.headers["Authorization"] = "Bearer foo"
         let res = drop.respond(to: req)
 
         // verify response and get cookie
-        XCTAssertEqual(res.body.bytes?.string, token)
+        XCTAssertEqual(res.body.bytes?.makeString(), "Bob")
         guard let cookie = res.cookies["vapor-session"] else {
             XCTFail("No cookie")
             return
@@ -114,7 +106,7 @@ extension TokenTests {
         req2.cookies["vapor-session"] = cookie
         let res2 = drop.respond(to: req2)
 
-        XCTAssertEqual(res2.body.bytes?.string, cookie)
+        XCTAssertEqual(res2.body.bytes?.makeString(), cookie)
     }
 }
 

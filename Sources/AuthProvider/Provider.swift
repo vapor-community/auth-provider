@@ -1,5 +1,7 @@
 import Vapor
 
+/// Nothing here yet, but add incase we anything
+/// gets added in the future.
 public final class Provider: Vapor.Provider {
     public init() {}
 

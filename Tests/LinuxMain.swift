@@ -1,5 +1,5 @@
 import XCTest
-@testable import VaporAuthTests
+@testable import AuthProviderTests
 
 XCTMain([
     testCase(TokenTests.allTests),
