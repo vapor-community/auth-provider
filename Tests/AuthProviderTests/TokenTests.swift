@@ -1,10 +1,33 @@
 import XCTest
 import Vapor
 import HTTP
-@testable import VaporAuth
+@testable import AuthProvider
 import Authentication
 
 class TokenTests: XCTestCase {
+    
+    override func setUp() {
+        let memory = try! SQLiteDriver(path: ":memory:")
+        let database = Database(memory)
+        
+        database.log = { query in
+            print(query)
+        }
+        
+        TestToken.database = database
+        TestUser.database = database
+        
+        try! TestToken.prepare(database)
+        try! TestUser.prepare(database)
+        
+        // add user and token to db
+        let tokenString = "foo"
+        let user = TestUser(name: "Bob")
+        try! user.save()
+        let token = try! TestToken(token: tokenString, user)
+        try! token.save()
+    }
+    
     static var allTests = [
         ("testAuthentication", testAuthentication),
         ("testPersistance", testPersistance)
@@ -22,18 +45,10 @@ import Fluent
 // with every request
 
 extension TestUser: TokenAuthenticatable {
-    // This is the only conformance needed to make
-    // TestUser authenticatable with tokens!
-    public typealias TokenType = TestUser
-
-    // but we're going to do a custom method instead
-    public static func authenticate(_ token: Token) throws -> Self {
-        guard token.string == "foo" else {
-            throw AuthenticationError.invalidCredentials
-        }
-        
-        return self.init(name: "Bob")
-    }
+    // join the TestToken table and search for
+    // the supplied bearer token to authenticate
+    // the user
+    public typealias TokenType = TestToken
 }
 
 extension Request {
@@ -45,22 +60,25 @@ extension Request {
 extension TokenTests {
     // Test stateless token authentication
     func testAuthentication() throws {
-        let drop = try Droplet()
+        do {
+            let drop = try Droplet()
 
-        drop.middleware.append(TokenAuthenticationMiddleware(TestUser.self))
+            let tokenMiddleware = TokenAuthenticationMiddleware(TestUser.self)
+            drop.middleware.append(tokenMiddleware)
 
-        drop.get("name") { req in
-            // return the users name
-            return try req.user().name
+            drop.get("name") { req in
+                // return the users name
+                return try req.user().name
+            }
+
+            let req = Request(.get, "name")
+            req.headers["Authorization"] = "Bearer foo"
+            let res = drop.respond(to: req)
+
+            XCTAssertEqual(res.body.bytes?.makeString(), "Bob")
+        } catch {
+            XCTFail("\(error)")
         }
-
-        let token = "foo"
-
-        let req = Request(.get, "name")
-        req.headers["Authorization"] = "Bearer \(token)"
-        let res = drop.respond(to: req)
-
-        XCTAssertEqual(res.body.bytes?.makeString(), "Bob")
     }
 }
 
@@ -100,11 +118,9 @@ extension TokenTests {
             return try req.user().name
         }
 
-        let token = "foo"
-
         // login request with token
         let req = Request(.get, "name")
-        req.headers["Authorization"] = "Bearer \(token)"
+        req.headers["Authorization"] = "Bearer foo"
         let res = drop.respond(to: req)
 
         // verify response and get cookie

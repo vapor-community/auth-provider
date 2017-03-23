@@ -1,7 +1,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "VaporAuth",
+    name: "AuthProvider",
     dependencies: [
         // A web framework and server for Swift that works on macOS and Ubuntu. 
         .Package(url: "https://github.com/vapor/auth.git", majorVersion: 0),
