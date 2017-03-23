@@ -6,25 +6,6 @@ import Authentication
 public final class TokenAuthenticationMiddleware<U: TokenAuthenticatable>: Middleware {
     public init(_ userType: U.Type = U.self) {}
 
-    public func respond(to request: Request, chainingTo next: Responder) throws -> Response {
-        guard let token = request.auth.header?.bearer else {
-            throw AuthenticationError.invalidCredentials
-        }
-
-        let u = try U.authenticate(token)
-
-        request.auth.authenticate(u)
-
-        return try next.respond(to: request)
-    }
-}
-
-/// Similar to the `TokenAuthenticationMiddleware` but requires
-/// a `Peristable` model and checks if the user is already 
-/// authenticated prior to authenticating.
-public final class TokenLoginMiddleware<U: TokenAuthenticatable & Persistable>: Middleware {
-    public init(_ userType: U.Type = U.self) {}
-
     public func respond(to req: Request, chainingTo next: Responder) throws -> Response {
         // if the user has already been authenticated
         // by a previous middleware, continue
@@ -38,8 +19,36 @@ public final class TokenLoginMiddleware<U: TokenAuthenticatable & Persistable>: 
 
         let u = try U.authenticate(token)
 
-        try req.auth.authenticate(u, persist: true)
+        req.auth.authenticate(u)
 
+        return try next.respond(to: req)
+    }
+}
+
+public final class PasswordAuthenticationMiddleware<U: PasswordAuthenticatable>: Middleware {
+    public let passwordVerifier: PasswordVerifier?
+    public init(
+        _ userType: U.Type = U.self,
+        _ passwordVerifier: PasswordVerifier? = nil
+    ) {
+        self.passwordVerifier = passwordVerifier
+    }
+    
+    public func respond(to req: Request, chainingTo next: Responder) throws -> Response {
+        // if the user has already been authenticated
+        // by a previous middleware, continue
+        if req.auth.isAuthenticated(U.self) {
+            return try next.respond(to: req)
+        }
+        
+        guard let password = req.auth.header?.basic else {
+            throw AuthenticationError.invalidCredentials
+        }
+        
+        let u = try U.authenticate(password)
+        
+        req.auth.authenticate(u)
+        
         return try next.respond(to: req)
     }
 }

@@ -1,9 +1,24 @@
+import Authentication
+import Authorization
+import Debugging
+import Vapor
+import HTTP
+
 public enum AuthError: Error {
     case noRequest
     case unspecified(Error)
 }
 
-import Debugging
+extension AuthenticationError: AbortError {
+    public var status: Status {
+        return .forbidden
+    }
+}
+extension AuthorizationError: AbortError {
+    public var status: Status {
+        return .unauthorized
+    }
+}
 
 extension AuthError: Debuggable {
     public var reason: String {

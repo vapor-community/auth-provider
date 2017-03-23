@@ -42,7 +42,13 @@ public final class Helper {
     }
 
     /// Removes the authenticated user from internal storage.
-    public func unauthenticate() {
+    public func unauthenticate() throws {
+        if
+            let user = request?.storage[authAuthenticatedKey] as? Persistable,
+            let req = request
+        {
+            try user.unpersist(for: req)
+        }
         request?.storage[authAuthenticatedKey] = nil
     }
 

@@ -81,7 +81,7 @@ extension TokenTests {
         let sessions = MemorySessions()
         drop.middleware.append(SessionsMiddleware(sessions))
         drop.middleware.append(PersistMiddleware(TestUser.self))
-        drop.middleware.append(TokenLoginMiddleware(TestUser.self))
+        drop.middleware.append(TokenAuthenticationMiddleware(TestUser.self))
 
         // add the token middleware to a route group
         drop.get("name") { req in

@@ -14,8 +14,12 @@ private let sessionEntityId = "session-entity-id"
 /// MARK: Default conformance
 
 extension SessionPersistable where Self: Entity {
-    public func persist(for request: Request) throws {
-        try request.session().data.set(sessionEntityId, id)
+    public func persist(for req: Request) throws {
+        try req.session().data.set(sessionEntityId, id)
+    }
+    
+    public func unpersist(for req: Request) throws {
+        try req.session().data.set(sessionEntityId, nil)
     }
     
     public static func fetchPersisted(for request: Request) throws -> Self? {

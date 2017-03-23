@@ -6,6 +6,7 @@ import Authentication
 /// and the `req.auth.authenticate(..., persist: true)` method.
 public protocol Persistable {
     func persist(for: Request) throws
+    func unpersist(for: Request) throws
     static func fetchPersisted(for: Request) throws -> Self?
 }
 
@@ -15,11 +16,17 @@ public protocol Persistable {
 public final class PersistMiddleware<U: Authenticatable & Persistable>: Middleware {
     public init(_ userType: U.Type = U.self) {}
 
-    public func respond(to request: Request, chainingTo next: Responder) throws -> Response {
-        if let user = try U.fetchPersisted(for: request) {
-            request.auth.authenticate(user)
+    public func respond(to req: Request, chainingTo next: Responder) throws -> Response {
+        if let user = try U.fetchPersisted(for: req) {
+            req.auth.authenticate(user)
         }
 
-        return try next.respond(to: request)
+        let res = try next.respond(to: req)
+        
+        if let user = req.auth.authenticated(U.self) {
+            try user.persist(for: req)
+        }
+        
+        return res
     }
 }
