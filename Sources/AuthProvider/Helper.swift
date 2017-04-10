@@ -14,7 +14,17 @@ public final class Helper {
     // from the request.
     public var header: AuthorizationHeader? {
         guard let authorization = request?.headers["Authorization"] else {
-            return nil
+            guard let query = request?.query else {
+                return nil
+            }
+            
+            if let bearer = query["_authorizationBearer"]?.string {
+                return AuthorizationHeader(string: "Bearer \(bearer)")
+            } else if let basic = query["_authorizationBasic"]?.string {
+                return AuthorizationHeader(string: "Basic \(basic)")
+            } else {
+                return nil
+            }
         }
 
         return AuthorizationHeader(string: authorization)
