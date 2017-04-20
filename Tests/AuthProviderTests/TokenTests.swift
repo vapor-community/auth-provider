@@ -46,10 +46,16 @@ import Fluent
 extension TokenTests {
     // Test stateless token authentication
     func testAuthentication() throws {
-        let drop = try Droplet()
-
-        let tokenMiddleware = TokenAuthenticationMiddleware(TestUser.self)
-        drop.middleware.append(tokenMiddleware)
+        var config = Config([:])
+        try config.set("droplet.middleware", [
+            "token"
+        ])
+        
+        config.addConfigurable(middleware: { config in
+            TokenAuthenticationMiddleware(TestUser.self)
+        }, name: "token")
+        
+        let drop = try Droplet(config)
 
         drop.get("name") { req in
             // return the users name
@@ -58,7 +64,7 @@ extension TokenTests {
 
         let req = Request(.get, "name")
         req.headers["Authorization"] = "Bearer foo"
-        let res = drop.respond(to: req)
+        let res = try drop.respond(to: req)
 
         XCTAssertEqual(res.body.bytes?.makeString(), "Bob")
     }
@@ -76,12 +82,23 @@ import Sessions
 extension TokenTests {
 
     func testPersistance() throws {
-        let drop = try Droplet()
+        var config = Config([:])
+        try config.set("droplet.middleware", [
+            "sessions",
+            "persist",
+            "token"
+        ])
+        
+        config.addConfigurable(middleware: { config in
+            return PersistMiddleware(TestUser.self)
+        }, name: "persist")
+        
+        config.addConfigurable(middleware: { config in
+            TokenAuthenticationMiddleware(TestUser.self)
+        }, name: "token")
+        
+        let drop = try Droplet(config)
 
-        let sessions = MemorySessions()
-        drop.middleware.append(SessionsMiddleware(sessions))
-        drop.middleware.append(PersistMiddleware(TestUser.self))
-        drop.middleware.append(TokenAuthenticationMiddleware(TestUser.self))
 
         // add the token middleware to a route group
         drop.get("name") { req in
@@ -92,7 +109,7 @@ extension TokenTests {
         // login request with token
         let req = Request(.get, "name")
         req.headers["Authorization"] = "Bearer foo"
-        let res = drop.respond(to: req)
+        let res = try drop.respond(to: req)
 
         // verify response and get cookie
         XCTAssertEqual(res.body.bytes?.makeString(), "Bob")
@@ -104,7 +121,7 @@ extension TokenTests {
         // logged in request with cookie
         let req2 = Request(.get, "name")
         req2.cookies["vapor-session"] = cookie
-        let res2 = drop.respond(to: req2)
+        let res2 = try drop.respond(to: req2)
 
         XCTAssertEqual(res2.body.bytes?.makeString(), cookie)
     }

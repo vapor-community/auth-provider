@@ -31,7 +31,7 @@ final class TestToken: Entity {
 extension TestToken: Preparation {
     static func prepare(_ database: Database) throws {
         try database.create(self) { users in
-            users.id(for: self)
+            users.id()
             users.string("token")
             users.foreignId(for: TestUser.self)
         }

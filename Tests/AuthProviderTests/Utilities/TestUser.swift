@@ -28,7 +28,7 @@ final class TestUser: Entity {
 extension TestUser: Preparation {
     static func prepare(_ database: Database) throws {
         try database.create(self) { users in
-            users.id(for: self)
+            users.id()
             users.string("name")
         }
     }
