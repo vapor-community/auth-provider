@@ -7,6 +7,8 @@ import Authentication
 class TokenTests: XCTestCase {
     
     override func setUp() {
+        Node.fuzzy = [Node.self]
+        
         let memory = try! MemoryDriver()
         let database = Database(memory)
         
