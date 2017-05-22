@@ -15,6 +15,7 @@ final class TestUser: Entity {
     }
 
     init(row: Row) throws {
+        print(row)
         name = try row.get("name")
     }
 
@@ -57,13 +58,4 @@ extension Request {
 
 // MARK: Sessions
 
-extension TestUser: SessionPersistable {
-    public static func fetchPersisted(for req: Request) throws -> Self? {
-        // take the cookie and set it as the user's
-        // name for easy verification
-        guard let cookie = req.cookies["vapor-session"] else {
-            return nil
-        }
-        return self.init(name: cookie)
-    }
-}
+extension TestUser: SessionPersistable {}
