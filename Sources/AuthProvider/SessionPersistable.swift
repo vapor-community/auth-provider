@@ -15,7 +15,10 @@ private let sessionEntityId = "session-entity-id"
 
 extension SessionPersistable where Self: Entity {
     public func persist(for req: Request) throws {
-        try req.assertSession().data.set(sessionEntityId, id)
+        let session = try req.assertSession()
+        if session.data[sessionEntityId]?.wrapped != id?.wrapped {
+            try req.assertSession().data.set(sessionEntityId, id)
+        }
     }
     
     public func unpersist(for req: Request) throws {
