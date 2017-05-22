@@ -15,7 +15,6 @@ final class TestUser: Entity {
     }
 
     init(row: Row) throws {
-        print(row)
         name = try row.get("name")
     }
 

@@ -12,10 +12,6 @@ class TokenTests: XCTestCase {
         let memory = try! MemoryDriver()
         let database = Database(memory)
         
-        database.log = { query in
-            print(query)
-        }
-        
         TestToken.database = database
         TestUser.database = database
         
