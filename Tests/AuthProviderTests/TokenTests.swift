@@ -12,10 +12,6 @@ class TokenTests: XCTestCase {
         let memory = try! MemoryDriver()
         let database = Database(memory)
         
-        database.log = { query in
-            print(query)
-        }
-        
         TestToken.database = database
         TestUser.database = database
         
@@ -80,6 +76,7 @@ extension TokenTests {
 // After that, the cookie can act as a login persister
 
 import Sessions
+import Cookies
 
 extension TokenTests {
 
@@ -96,7 +93,7 @@ extension TokenTests {
         }, name: "persist")
         
         config.addConfigurable(middleware: { config in
-            TokenAuthenticationMiddleware(TestUser.self)
+            return TokenAuthenticationMiddleware(TestUser.self)
         }, name: "token")
         
         let drop = try Droplet(config)
@@ -124,8 +121,9 @@ extension TokenTests {
         let req2 = Request(.get, "name")
         req2.cookies["vapor-session"] = cookie
         let res2 = try drop.respond(to: req2)
+        XCTAssertEqual(res2.cookies.array.count, 0)
 
-        XCTAssertEqual(res2.body.bytes?.makeString(), cookie)
+        XCTAssertEqual(res2.body.bytes?.makeString(), "Bob")
     }
 }
 
