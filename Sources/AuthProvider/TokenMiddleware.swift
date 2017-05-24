@@ -29,7 +29,7 @@ public final class PasswordAuthenticationMiddleware<U: PasswordAuthenticatable>:
     public let passwordVerifier: PasswordVerifier?
     public init(
         _ userType: U.Type = U.self,
-        _ passwordVerifier: PasswordVerifier? = nil
+        _ passwordVerifier: PasswordVerifier? = U.passwordVerifier
     ) {
         self.passwordVerifier = passwordVerifier
     }
