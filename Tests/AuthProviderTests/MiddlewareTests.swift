@@ -50,6 +50,7 @@ class MiddlewareTests: XCTestCase {
     }
 
     static var allTests = [
-        ("testRedirectMiddleware", testRedirectMiddleware)
+        ("testRedirectMiddleware", testRedirectMiddleware),
+        ("testInverseRedirectMiddleware", testInverseRedirectMiddleware)
     ]
 }
