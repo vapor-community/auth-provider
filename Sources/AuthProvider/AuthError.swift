@@ -11,12 +11,12 @@ public enum AuthError: Error {
 
 extension AuthenticationError: AbortError {
     public var status: Status {
-        return .forbidden
+        return .unauthorized
     }
 }
 extension AuthorizationError: AbortError {
     public var status: Status {
-        return .unauthorized
+        return .forbidden
     }
 }
 
