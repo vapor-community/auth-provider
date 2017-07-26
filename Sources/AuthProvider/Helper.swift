@@ -10,24 +10,30 @@ public final class Helper {
         self.request = request
     }
 
-    /// Returns the `Authorization: ...` header
+    /// Returns and sets the `Authorization: ...` header
     // from the request.
     public var header: AuthorizationHeader? {
-        guard let authorization = request?.headers["Authorization"] else {
-            guard let query = request?.query else {
-                return nil
+        get {
+            guard let authorization = request?.headers["Authorization"] else {
+                guard let query = request?.query else {
+                    return nil
+                }
+                
+                if let bearer = query["_authorizationBearer"]?.string {
+                    return AuthorizationHeader(string: "Bearer \(bearer)")
+                } else if let basic = query["_authorizationBasic"]?.string {
+                    return AuthorizationHeader(string: "Basic \(basic)")
+                } else {
+                    return nil
+                }
             }
             
-            if let bearer = query["_authorizationBearer"]?.string {
-                return AuthorizationHeader(string: "Bearer \(bearer)")
-            } else if let basic = query["_authorizationBasic"]?.string {
-                return AuthorizationHeader(string: "Basic \(basic)")
-            } else {
-                return nil
-            }
+            return AuthorizationHeader(string: authorization)
         }
-
-        return AuthorizationHeader(string: authorization)
+        
+        set {
+            request?.headers[.authorization] = newValue?.string
+        }
     }
 
     /// Authenticates an `Authenticatable` type.
